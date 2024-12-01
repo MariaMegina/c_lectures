@@ -27,7 +27,7 @@ private:
 template <typename T>
 class TIntrusivePtr {
 public:
-    TIntrusivePtr() : ptr(nullptr) {}
+    TIntrusivePtr(std::nullptr_t) : ptr(nullptr) {}
 
     explicit TIntrusivePtr(T* rawPtr) : ptr(rawPtr) {
         if (ptr) {
@@ -68,28 +68,48 @@ public:
     ~TIntrusivePtr() {
         Reset();
     }
+    void Reset(TIntrusivePtr&& other) noexcept {
+        if (ptr != other.ptr) {
+            Reset(); // Освобождаем текущий указатель
+            ptr = other.ptr;
+            other.ptr = nullptr;
+        }
+    }
 
     void Reset(T* newPtr = nullptr) {
-        if (ptr) {
-            ptr->ReleaseRef();
-            if (ptr->RefCount() == 0) {
-                delete ptr;
+        if (ptr != newPtr) {
+            if (ptr) {
+                ptr->ReleaseRef();
+                if (ptr->RefCount() == 0) {
+                    delete ptr;
+                }
             }
-        }
-        ptr = newPtr;
-        if (ptr) {
-            ptr->AddRef();
+            ptr = newPtr;
+            if (ptr) {
+                ptr->AddRef();
+            }
         }
     }
     
-    void Reset(TIntrusivePtr&& other) noexcept {
-    	if (ptr != other.ptr) {
+    void Reset(const TIntrusivePtr& other) {
+        if (ptr != other.ptr) {
             Reset();
             ptr = other.ptr;
-            other.ptr = nullptr;
-    	}
+            if (ptr) {
+                ptr->AddRef();
+            }
+        }
     }
 
+    T* operator->() const {
+        assert(ptr && "Dereferencing a null pointer");
+        return ptr;
+    }
+
+    T& operator*() const {
+        assert(ptr && "Dereferencing a null pointer");
+        return *ptr;
+    }
 
     T* Release() {
         T* temp = ptr;
@@ -103,14 +123,6 @@ public:
 
     int UseCount() const {
         return ptr ? ptr->RefCount() : 0;
-    }
-
-    T* operator->() const {
-        return ptr;
-    }
-
-    T& operator*() const {
-        return *ptr;
     }
 
     explicit operator bool() const {
@@ -142,7 +154,7 @@ public:
 };
 
 int main() {
-    TIntrusivePtr<TDoc> ptr;
+    TIntrusivePtr<TDoc> ptr = nullptr;
     ptr = MakeIntrusive<TDoc>();
     std::cout << "RefCount: " << ptr.UseCount() << "\n"; // RefCount == 1
 
@@ -150,7 +162,7 @@ int main() {
     std::cout << "RefCount: " << ptr.UseCount() << "\n"; // RefCount == 2
 
     TIntrusivePtr<TDoc> ptr3 = MakeIntrusive<TDoc>();
-    ptr3.Reset(ptr2.Get());
+    ptr3.Reset(ptr2);
     std::cout << "RefCount: " << ptr.UseCount() << "\n"; // RefCount == 3
 
     ptr3.Reset();
