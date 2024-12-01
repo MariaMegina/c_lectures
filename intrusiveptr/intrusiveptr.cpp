@@ -154,11 +154,11 @@ int main() {
     std::cout << "RefCount: " << ptr.UseCount() << "\n"; // RefCount == 3
 
     ptr3.Reset();
-    std::cout << "RefCount after Reset: " << ptr.UseCount() << "\n"; // RefCount == 2
+    std::cout << "RefCount: " << ptr.UseCount() << "\n"; // RefCount == 2
 
     ptr3.Reset(std::move(ptr2));
-    std::cout << "RefCount after move: " << ptr.UseCount() << "\n"; // RefCount == 2
+    std::cout << "RefCount: " << ptr.UseCount() << "\n"; // RefCount == 2
 
-    static_assert(sizeof(TDoc*) == sizeof(ptr), "TIntrusivePtr must be pointer-sized");
+    static_assert(sizeof(TDoc*) == sizeof(ptr));
 }
 
